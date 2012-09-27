@@ -1,0 +1,53 @@
+page << create_function_using_ajax_response do
+%Q`
+  if(xl.orderNewWindow){
+    xl.orderNewWindow.show();
+  }
+  else{
+    var createButton = new Ext.Toolbar.Button({
+      text:"Create"
+      ,handler:function(){
+        var selectedContactId = contactSelection.getValue();
+        if(selectedContactId==""){
+          Ext.Msg.alert("Creating new order failed", "Please select a contact");
+        }
+        else{
+          Ext.Ajax.request({
+            url:#{orders_path.to_json}
+            ,method:"POST"
+            ,params:{"order[invoice_to_id]":selectedContactId, "order[invoice_to_type]":"Party"}
+            ,success:function(response, options){
+              xl.orderNewWindow.hide();
+            }
+          });
+        }
+      }
+    });
+    
+    var cancelButton = new Ext.Toolbar.Button({
+      text:"Cancel" 
+      ,handler:function(){
+        xl.orderNewWindow.hide();
+      }
+    });
+    
+    var contactSelection = new xl.widget.ContactSelection({
+      fieldLabel:"Type contact name"
+      ,listClass:"normal-white-space"
+    });
+    
+    xl.orderNewWindow = new Ext.Window({
+      title:"Create new order | Select a contact"
+      ,layout:"form"
+      ,resizable:false
+      ,width:500
+      ,height:100
+      ,closeAction:"hide"
+      ,items:[contactSelection]
+      ,bbar:new Ext.Toolbar({items:[createButton, cancelButton]})
+    });
+    
+    xl.orderNewWindow.show();
+  }
+`
+end

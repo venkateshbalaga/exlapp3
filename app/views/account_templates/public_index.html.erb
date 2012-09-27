@@ -1,0 +1,20 @@
+<% @account_templates.each_with_index do |account_template, index| %>
+  <tr>
+    <td align="center"><%= radio_button_tag "acct[account_template_id]", account_template.id, (index==0) %></td>
+    <td class="title"><a target="_blank" href="<%= account_template.demo_url %>"><%= account_template.name %></a></td>
+    <td><%= account_template.industry ? account_template.industry.name : "None" %></td>
+    <td><%= account_template.main_theme ? account_template.main_theme.name : "None" %></td>
+    <td><%= account_template.trunk_account.owner.display_name %></td>
+    <td><%= account_template.setup_fee %></td>
+    <td><%= account_template.subscription_fee %>&nbsp;/&nbsp;month</td>
+  </tr>
+  <tr>
+    <td colspan="10">
+  <% if image = account_template.images.first %>
+    <%= link_to image_tag(image.thumbnails.find_by_thumbnail('medium') ? image.thumbnails.find_by_thumbnail('medium').src : image.src), "http://#{account_template.trunk_account.domains.first.name}", :popup => true %>
+  <% end %>
+    <div class="details">
+      <%= account_template.description.blank? ? "No Description" : account_template.description%></div>
+    </td>
+  </tr>
+<% end %>

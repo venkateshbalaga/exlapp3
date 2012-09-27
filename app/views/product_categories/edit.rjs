@@ -1,0 +1,88 @@
+cat = @product_category
+form = %Q`{url: #{async_update_product_category_path(:id => cat.id).to_json}, object: 'product_category'}`
+afteredit = %Q`function(oldValue, decodedResponse, responseText, cpt){
+  if(decodedResponse.success){
+    Ext.get('product_category_#{cat.id}_error_messages').dom.innerHTML = "";
+  }else{
+    Ext.get('product_category_#{cat.id}_error_messages').dom.innerHTML = decodedResponse.errors[0];
+  }
+}`
+filenameRegExp = '/\.(\w+)$/'
+
+page << %Q`
+{
+  'xtype': 'panel',
+  'layout': 'table',
+  'layoutConfig': { 'columns': 2 },
+  'items': [
+    {
+      html: "<div id='product_category_#{cat.id}_error_messages'></div>",
+      colspan: 2
+    },
+    {
+     layout: 'form',
+     labelAlign: 'right',
+     items: [
+       xl.widget.InlineActiveField({
+         form: #{form},
+         field: {value: #{cat.name.to_json}, width: 300, name: 'name', fieldLabel: 'Name'},
+         afteredit: function(oldValue, newValue, rawJSON) {
+           xl.log('Afteredit');
+           try {
+             var treePanel = Ext.StoreMgr.get('product_categories_treePanel_piggyback');
+             treePanel.getNodeById(#{cat.id}).setText(newValue);
+           } catch(e) {
+             xl.log(e);
+           }
+         }
+       }),
+       xl.widget.InlineActiveField({ form: #{form}, afteredit: #{afteredit}, field: {xtype: 'textfield', width: 300, value: #{cat.label.to_json}, name: 'label', fieldLabel: 'Label'} }),
+       xl.widget.InlineActiveField({ form: #{form}, afteredit: #{afteredit}, field: {xtype: 'textarea', width: 300, height: 75, value: #{cat.description.to_json}, name: 'description', fieldLabel: 'Description'} }),
+       xl.widget.InlineActiveField({ form: #{form}, afteredit: #{afteredit}, field: {xtype: 'textarea', width: 300, height: 75, value: #{cat.web_copy.to_json}, name: 'web_copy', fieldLabel: 'Web Copy'} }),
+       xl.widget.InlineActiveField({ form: #{form}, afteredit: #{afteredit}, field: {xtype: 'checkbox', width: 25, height: 20, value: #{cat.private.to_json}, name: 'private', fieldLabel: 'Private'} }),
+       {html: "<div id='product_category_#{cat.id}_tags_panel_wrapper'></div>"},
+       {
+         xtype: 'hidden',
+         id: 'product_category_#{cat.id}.hidden.product_ids',
+         value: #{cat.product_ids.to_json}
+       }
+     ]
+    },
+    
+    {
+      bbar: [{
+            text: "Change/Upload picture",
+            listeners: {
+              click: function(button, event){
+                xl.widget.OpenSingleImagePicker('product_category_#{cat.id}_img_wrapper_panel', #{formatted_image_picker_assets_path(:format => :json).to_json}, "ProductCategory", #{cat.id}, {
+                  setAvatar: true,
+                  setRelation: true,
+                  windowTitle: "Please select your avatar...",
+                  beforeSelect: function(window){
+                    window.el.mask("Processing...");
+                  },
+                  afterSelect: function(selectedRecord, window){
+                    var params = {};
+                    params["product_category[avatar_id]"] = selectedRecord.id;
+                    Ext.Ajax.request({
+                      url: #{async_update_product_category_path(cat).to_json},
+                      method: "PUT",
+                      params: params,
+                      success: function(response, options){
+                        window.close();
+                      }
+                    });
+                  }
+                });
+              }
+            }
+          }],
+      id: 'product_category_#{cat.id}_img_wrapper_panel',
+      items: [{
+        'html': '#{render_img_tag_or_none(cat.avatar_id)}'
+      }],
+      'rowspan': 3 
+    }
+  ]
+}
+`

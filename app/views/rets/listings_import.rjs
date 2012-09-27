@@ -1,0 +1,5 @@
+page << create_tab_using_ajax_response("Targeted MLS# Import") do
+%Q`
+  newPanel.add({ autoScroll: true, html: #{render(:partial => 'listings_import_from_rjs').to_json} });
+`
+end

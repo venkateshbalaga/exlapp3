@@ -1,0 +1,226 @@
+after_render = ""
+
+addGroupWindow = %Q`
+      var win = new Ext.Window({
+        title: "New Group",
+        modal: true,
+        width:350,
+        autoHeight:true,
+        closeAction:'hide',
+        plain: true,
+        items: [ newGroupFormPanel ],
+        buttons: [{
+          text:'Submit',
+          handler: function(){
+            newGroupFormPanel.getForm().doAction("submit",
+                {
+                  url: #{groups_path.to_json},
+                  method: "POST",
+                  success: function(form, action){
+                    var response = action.result;
+                    if (response.success){
+                      groupsFileTreePanel.getLoader().load(groupsRootTreeNode);
+                    }
+                    else {
+                      Ext.Msg.alert("Error:", response.errors);
+                    }
+                    groupsFileTreePanel.el.unmask();
+                  },
+                  failure: function(form, action){
+                    var response = action.result;
+                    Ext.Msg.alert("Error:", response.errors);
+                    groupsFileTreePanel.el.unmask();
+                  }
+                }
+              );
+            win.hide();
+          }
+      },{
+          text: 'Close',
+          handler: function(){
+              win.hide();
+          }
+        }]
+      });
+      
+      win.show();
+`
+
+page << create_tab_using_ajax_response("Groups", after_render) do
+%Q`
+  var selectedIds = new Array();
+  var clickedId = null;
+  
+  var groupParentIdField = new Ext.form.Hidden({
+    name: "group[parent_id]"
+  });
+  
+  var newGroupFormPanel = new Ext.form.FormPanel({
+    defaults: { width:200 },
+    items:[
+      new Ext.form.TextField({
+        fieldLabel: "Name",
+        name: "group[name]"
+      }),
+      new Ext.form.TextField({
+        fieldLabel: "Label",
+        name: "group[label]"
+      }),
+      new Ext.form.Checkbox({
+        fieldLabel: "Private?",
+        name: "group[private]",
+        inputValue: '1'
+      }),
+      new Ext.form.TextField({
+        fieldLabel: "Tag List",
+        name: "group[tag_list]"
+      }),
+      new Ext.form.TextArea({
+        fieldLabel: "Description",
+        name: "group[description]"
+      }),
+      new Ext.form.TextArea({
+        fieldLabel: "Private Description",
+        name: "group[private_description]"
+      }),
+      new Ext.form.TextArea({
+        fieldLabel: "Web Copy",
+        name: "group[web_copy]"
+      }),
+      groupParentIdField
+    ]
+  });
+  
+  var addToRootAction = new Ext.Action({
+    text: "Add to Root",
+    iconCls: "display_none",
+    handler: function(){
+      groupParentIdField.setValue(null);
+      
+      #{addGroupWindow}
+    }
+  });
+  
+  var addAction = new Ext.Action({
+    disabled: true,
+    text: "Add",
+    iconCls: "display_none",
+    handler: function(){
+      groupParentIdField.setValue(clickedId);
+      
+      #{addGroupWindow}
+    }
+  });
+
+  var deleteAction =  new Ext.Action({
+    disabled: true,
+    text: "Delete",
+    iconCls: "display_none",
+    handler: function(){
+      Ext.Msg.confirm("Deleting groups", "Completely removed checked group(s)?", function(buttonText){
+        if (buttonText.match(new RegExp("yes","i"))) {
+          groupsFileTreePanel.el.mask("Processing delete...");
+          Ext.Ajax.request({
+            url: #{destroy_collection_groups_path.to_json},
+            method: "DELETE",
+            params: { ids: selectedIds.join(",") },
+            callback: function(options, success, response){
+              selectedIds.clear();
+            },
+            success: function(response, options) {
+              response = Ext.util.JSON.decode(response.responseText);
+              xl.updateStatusBar(response.flash);
+              groupsFileTreePanel.getLoader().load(groupsRootTreeNode);
+              groupsFileTreePanel.el.unmask();
+            },
+            failure: function(response, options){
+              #{self.connection_error_message}
+              groupsFileTreePanel.el.unmask();            
+            }
+          });
+        }
+      });
+    }
+  });
+
+  var groupsRootTreeNode =  new Ext.tree.AsyncTreeNode({
+    text: "Group - Root",
+    expanded: true,
+    id: 0
+  });
+
+  var editGroupPath = #{edit_group_path(:id => "__ID__").to_json};
+
+  var groupsFileTreePanel = new Ext.tree.TreePanel({
+    root: groupsRootTreeNode,
+    rootVisible: false,
+    disableCheckWhenDblClick: true,
+    disableAnimatingWhenDblClick: true,
+    height: (#{get_default_grid_height(nil)}-30),
+    loader: new Ext.tree.TreeLoader({
+      requestMethod: "GET",
+      url: #{formatted_groups_path(:format => :json).to_json},
+      baseAttrs: {uiProvider: Ext.tree.TreeCheckNodeUI}
+    }),
+    enableDD: true,
+    tbar: [addToRootAction, addAction, deleteAction],
+    listeners: {
+        check: function(node, checked){
+          if (checked){
+            selectedIds.push(node.id);
+          }
+          else{
+            selectedIds.splice(selectedIds.indexOf(node.id));
+          }
+          if(selectedIds.size()>0){
+            deleteAction.enable();
+          }
+          else{
+            deleteAction.disable();
+          }
+        },
+        click: function(node, event){
+          clickedId = node.id;
+          addAction.enable();
+        },
+        dblclick: function(node, event){
+          xl.openNewTabPanel('groups_edit_' + 'node.id', editGroupPath.sub("__ID__", node.id));
+        },
+        beforenodedrop: function(e){
+          var ids = [];
+          var options = {
+            url: "/admin/groups/reorder",
+            method: "post",
+            scope: this,
+            callback: groupDropCallback,
+            params: {
+              id: e.data.node.id,
+              target_id: e.target.id,
+              type: e.point
+            }
+          };
+          Ext.Ajax.request(options);
+          return true;
+        }
+      }
+  });
+  
+  var groupDropCallback = function(options, success, response) {
+    response = Ext.decode(response.responseText);
+    if(response.success){
+      $("status-bar-notifications").innerHTML = response.flash;
+    }
+    else{
+      Ext.Msg.alert("Error moving group", response.errors);
+    } 
+  };
+  
+  xl.groupsTreePanel = groupsFileTreePanel;
+
+  newPanel.add(groupsFileTreePanel);
+  
+  newPanel.on("destroy", function(){
+    xl.groupsTreePanel = null;
+  });
+`
+end

@@ -1,0 +1,32 @@
+<%= render :partial => "shared/doctype" %>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <link rel="shortcut icon" href="<%= render_favicon_url %>" type="image/x-icon" />
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
+  <title>XLsuite Affiliate Account</title>
+  <%= yield(:head) %>
+  
+  <%= cached_javascript_include_tag "extjs/adapter/ext/ext-base.js" %>
+  <%= cached_javascript_include_tag "extjs/ext-all-debug.js" unless RAILS_ENV == "production" %>
+  <%= cached_javascript_include_tag "extjs/ext-all.js" if RAILS_ENV == "production" %>
+  <%= cached_javascript_include_tag "Ext.ux.MultiGrouping.js" %>
+  <%= cached_javascript_include_tag "Ext.grid.GroupSummary.js" %>
+  <%= cached_javascript_include_tag "Ext.ux.grid.GridSummary/Ext.ux.grid.GridSummary.js" %>  
+  <%= cached_javascript_include_tag "affiliate_account_ui.js" %>  
+  <%= yield(:js) %>
+  
+  <%= cached_stylesheet_link_tag "/javascripts/extjs/resources/css/ext-all.css" %>
+  <%= cached_stylesheet_link_tag "/javascripts/extjs/resources/css/xtheme-default.css", :id => "theme" %>
+  <%= cached_stylesheet_link_tag "/javascripts/Ext.ux.grid.GridSummary/Ext.ux.grid.GridSummary.css" %>
+  <style type="text/css">
+    body{height:100%; width:100%;}
+    #affiliate-account-ui-body{margin:0 auto; width:1024px;}
+    #referred-items .x-grid3-summary-row{margin-left:24px;}
+    .x-grid3-cell-inner, .x-grid3-hd-inner {white-space:normal;}
+  </style>
+  <%= yield(:css) %>
+</head>
+<body>
+  <div id="affiliate-account-ui-body"></div>
+</body>
+</html>

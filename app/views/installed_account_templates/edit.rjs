@@ -1,0 +1,115 @@
+page << create_tab_using_ajax_response("Installed Suite | #{@installed_account_template.account_template.name}") do
+%Q`
+  var buttonConfig = {
+    text: "Update",
+    handler: function(btn, e){
+      Ext.Msg.confirm("Updating template", "Do you want to proceed?", function(btn){
+        if ( btn.match(new RegExp("yes","i")) ) {
+          excludeItemsHiddenField.setRawValue(excludeItemIds.join(","));
+          formPanel.getForm().doAction("submit", 
+            {
+              url: #{refresh_installed_account_template_path(@installed_account_template).to_json},
+              method: "POST",
+              success: function(response, action){
+                Ext.Msg.alert("Updating template", "Your request has been received. Please refrain from modifying suite items. You will receive an email at #{self.current_account.owner.main_email.email_address} once the update has been completed");
+                formPanel.el.unmask();
+              },
+              failure: function(response, action){
+                Ext.Msg.alert("Updating template", "There is a problem while processing your request. Please contact our admin.")
+                formPanel.el.unmask();
+              }
+            }
+          );
+          formPanel.el.mask("Requesting update on \\"#{@installed_account_template.account_template.name}\\"...")    
+        }
+      });
+    }
+  };
+
+  var updateButton = new Ext.Button(buttonConfig);
+  var bottomUpdateButton = new Ext.Button(buttonConfig);
+  
+  var excludeItemsHiddenField = new Ext.form.Hidden({
+    name: "update[exclude_items]"
+  });
+  
+  var assetsCheckboxField = new Ext.form.Checkbox({
+    fieldLabel: "Assets",
+    name: "update[assets]",
+    checked: true
+  });
+
+  var configurationsCheckboxField = new Ext.form.Checkbox({
+    fieldLabel: "Configurations",
+    name: "update[configurations]",
+    checked: true
+  });
+  
+  var workflowsCheckboxField = new Ext.form.Checkbox({
+    fieldLabel: "Workflows",
+    name: "update[workflows]",
+    checked: true
+  });
+  
+  var overwriteCheckboxField = new Ext.form.Checkbox({
+    fieldLabel: "Overwrite components with suite's?",
+    name: "update[overwrite]"
+  });
+
+  var formPanel = new Ext.form.FormPanel({
+    items: [assetsCheckboxField, configurationsCheckboxField, workflowsCheckboxField, overwriteCheckboxField, excludeItemsHiddenField],
+    bbar: [updateButton],
+    tbar: [bottomUpdateButton],
+    listeners: {
+      render: function(cpt){
+        xl.fitToOwnerCtHeight(cpt);
+      }
+    }
+  });
+  
+  #{self.generate_changed_items_grid}
+  
+  #{self.generate_no_update_items_grid}
+  
+  var tabPanel = new Ext.TabPanel({
+    activeTab: 0,
+    tabPosition: "bottom",
+    items:[
+      {title: changedItemsGrid.title, items: changedItemsGrid, listeners: {show: function(panel){xl.viewport.render();}} },
+      {title: noUpdateItemsGrid.title, items: noUpdateItemsGrid, listeners: {show: function(panel){xl.viewport.render();}} }
+    ],
+    listeners: {
+      render: function(cpt){
+        xl.fitToOwnerCtHeight(cpt);
+      }
+    }
+  })
+    
+  var wrapperPanel = new Ext.Panel({
+    layout: "column",
+    items: [
+      {
+        items: formPanel,
+        listeners: {
+          render: function(cpt){
+            xl.fitToOwnerCtHeight(cpt);
+          }
+        },
+        columnWidth: .2
+      },
+      {
+        
+        items: [tabPanel],
+        listeners: {
+          render: function(cpt){
+            xl.fitToOwnerCtHeight(cpt);
+          }
+        },
+        columnWidth: .8
+      }
+    ]
+  });
+
+  newPanel.add(wrapperPanel);
+`
+end
